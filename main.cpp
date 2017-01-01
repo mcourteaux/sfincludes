@@ -18,7 +18,7 @@ void find_headers(fs::path dir, std::vector<fs::path> &headers);
 void rename_headers(std::vector<fs::path> &headers);
 void process_dir(fs::path dir, fs::path root, std::vector<fs::path> &headers);
 void process_file(fs::path file, fs::path root, std::vector<fs::path> &headers,
-                  size_t *total, size_t *replaced);
+                  size_t *total, size_t *replaced, size_t *untouched);
 std::string fix_include(std::string path, fs::path file, fs::path root,
                         std::vector<fs::path> &headers);
 
@@ -139,20 +139,24 @@ void rename_headers(std::vector<fs::path> &headers) {
 void process_dir(fs::path dir, fs::path root, std::vector<fs::path> &headers) {
     const std::vector<std::string> EXT = {".cpp", ".cxx", ".cc", ".h", ".hpp"};
     size_t replaced = 0;
+    size_t untouched = 0;
     size_t total = 0;
     for (fs::recursive_directory_iterator it(dir);
          it != fs::recursive_directory_iterator(); ++it) {
         fs::path file = it->path();
         if (std::find(EXT.begin(), EXT.end(), file.extension()) != EXT.end()) {
-            process_file(file, root, headers, &total, &replaced);
+            process_file(file, root, headers, &total, &replaced, &untouched);
         }
     }
 
-    std::cout << "Replaced: " << replaced << " / " << total << std::endl;
+    std::cout << "Replaced : " << replaced << " / " << total << std::endl;
+    std::cout << "Untouched: " << untouched << " / " << total << std::endl;
+    std::cout << "Total    : " << (replaced + untouched) << " / " << total
+              << std::endl;
 }
 
 void process_file(fs::path file, fs::path root, std::vector<fs::path> &headers,
-                  size_t *total, size_t *replaced) {
+                  size_t *total, size_t *replaced, size_t *untouched) {
     std::stringstream buffer;
     std::ifstream in(file.string());
     std::string line;
@@ -168,7 +172,11 @@ void process_file(fs::path file, fs::path root, std::vector<fs::path> &headers,
             std::cout << "  ->  " << fixed_path << std::endl;
 
             if (fixed_path.size()) {
-                (*replaced)++;
+                if (fixed_path == path) {
+                    (*untouched)++;
+                } else {
+                    (*replaced)++;
+                }
                 buffer << newline << std::endl;
             } else {
                 buffer << line << std::endl;
