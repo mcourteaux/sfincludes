@@ -29,9 +29,9 @@ int main(int argc, char **argv) {
     po::options_description desc("Allowed options");
     // clang-format off
     desc.add_options()
-        ("help", "produce help message")
-        ("root", po::value<std::string>(), "set root directory")
+        ("help", "produce help message") ("root", po::value<std::string>(), "set root directory")
         ("src", po::value<std::string>(), "set source directory")
+        ("root", po::value<std::string>(), "set root directory")
         ("fuzzy", po::value<int>()->default_value(0), "maximal edit distance")
         ("rename-hpp", "rename headers files to .hpp")
         ("dry-run", "perform a dry-run")
