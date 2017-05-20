@@ -1,7 +1,8 @@
 # SFincludes
 SFincludes (shorthand for Search Fix Includes) is a tool that goes
 through all of your source and header files in a given directory and
-tries to fix all `#include ""` preprocessor instructions it can find.
+tries to fix all `#include ""` preprocessor instructions it can find, by
+looking for files with similar names, in a set of directories you specify.
 
 How does it fix the includes? It searches first finds all header files
 (.h or .hpp) and then fixes every include with one of the found headers.
@@ -17,19 +18,22 @@ a particular file is a C or a C++ header.
 
 ## Command line arguments
 
-    --help                print help
-    --src         string  set source directory
-    --root        string  set root directory
-    --fuzzy       int     maximal edit distance (default: 0)
-    --rename-hpp          rename headers files to .hpp
-    --dry-run             perform a dry-run
+    --help                    print help
+    --verbose                 be verbose
+    --src            string   set source directory
+    --include-path   string   add a header search path (like GCC: -I)
+    --fuzzy          int      maximal edit distance (default: 0)
+    --rename-hpp              rename headers files to .hpp
+    --dry-run                 perform a dry-run
 
 The difference between root and src path is:
 
- - the **root path** is the path to which the include paths will be made
-   relative while fixing.
- - the **src path** is the directory in which it will search for headers and
-   source files to fix.
+ - the **include-path** is a path which will be used to find header files which
+   can be included. If an include can be mapped onto a header in this folder,
+   the include will be rewritten, relative to this path. You can add as many
+   include paths as you like.
+ - the **src path** is the directory in which it will search for C/C++ files
+   (headers and source files) to fix: rewrite the `#include` statements.
 
 Most often, these paths will be the same. Note that you always need to provide
 both.
