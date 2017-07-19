@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 
     // clang-format off
     desc.add_options()
-        ("help", "produce help message") ("root", po::value<std::string>(), "set root directory")
+        ("help", "produce help message")
         ("src", po::value<std::string>(), "set source directory")
         ("include-path", po::value<std::vector<std::string>>(&include_paths), "add include search path directory (cfr. gcc -Ipath)")
         ("fuzzy", po::value<int>()->default_value(0), "maximal edit distance")
