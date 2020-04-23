@@ -11,3 +11,5 @@ include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 add_executable(sfincludes main.cpp)
 target_link_libraries(sfincludes ${Boost_LIBRARIES})
+
+install(TARGETS sfincludes DESTINATION bin)
