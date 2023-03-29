@@ -56,12 +56,12 @@ int main(int argc, char **argv) {
         ("include-path", po::value<std::vector<std::string>>(&include_paths), "Add include search path directory (cfr. gcc -Ipath).")
         ("fuzzy", po::value<int>()->default_value(0), "Maximal edit distance.")
         ("process-system-includes", "Also process #include <> statements.")
-        ("system-to-user", "Replace #include < > with #include \" \" when the file is found. "
+        ("system-to-user", "Replace #include <> with #include \"\" when the file is found. "
                            "Only when --process-system-includes.")
-        ("prefer-relative-to-root", "Rename headers files to .hpp")
-        ("rename-hpp", "Rename headers files to .hpp")
-        ("no-dry-run", "Perform a dry-run")
-        ("verbose", "Be verbose")
+        ("prefer-relative-to-root", "Also rewrite correct includes to be relative to the root.")
+        ("rename-hpp", "Rename .h headers files to .hpp.")
+        ("no-dry-run", "Actually perform the changes.")
+        ("verbose", "Be verbose.")
         ;
     // clang-format on
 
