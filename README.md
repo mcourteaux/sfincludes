@@ -1,11 +1,12 @@
 # SFincludes
 SFincludes (shorthand for Search Fix Includes) is a tool that goes
 through all of your source and header files in a given directory and
-tries to fix all `#include ""` preprocessor instructions it can find, by
-looking for files with similar names, in a set of directories you specify.
+tries to fix all `#include ""` (and optionally `#include <>`) preprocessor
+instructions it can find, by looking for files with similar names, in a set of
+directories you specify.
 
 How does it fix the includes? It searches first finds all header files
-(.h or .hpp) and then fixes every include with one of the found headers.
+(`.h` or `.hpp`) and then fixes every include with one of the found headers.
 
 The selected header is chosen by the file name. By default the filename should
 match exactly. Optionally, fuzzy matching can be done, using the Levenshtein
@@ -18,6 +19,7 @@ a particular file is a C or a C++ header.
 
 ## Command line arguments
 
+```
   --help                     Produce help message.
   --src arg                  Set source directory.
   --include-path arg         Add include search path directory (cfr. gcc -Ipath).
@@ -30,6 +32,7 @@ a particular file is a C or a C++ header.
   --rename-hpp               Rename .h headers files to .hpp.
   --no-dry-run               Actually perform the changes.
   --verbose                  Be verbose.
+```
 
 The difference between root and src path is:
 
