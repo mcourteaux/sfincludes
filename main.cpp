@@ -1,11 +1,10 @@
-
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 #include "levenshtein_distance.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -14,7 +13,7 @@
 #include <vector>
 
 namespace po = boost::program_options;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 void find_headers(fs::path dir, std::vector<fs::path> &headers);
 
@@ -30,11 +29,20 @@ void process_file(fs::path file, const std::vector<fs::path> &include_paths,
 
 std::string fix_include(
     std::string path, fs::path file, const std::vector<fs::path> &include_paths,
-    const std::map<fs::path, std::vector<fs::path>> &headers);
+    const std::map<fs::path, std::vector<fs::path>> &headers, bool prefer_relative_to_root);
 
 int fuzzy = 0;
-bool dry_run = false;
+bool dry_run = true;
 bool verbose = false;
+bool process_system_includes = false;
+bool system_to_user = false;
+bool prefer_relative_to_root = false;
+
+const std::string RED = "\033[31m";
+const std::string GREEN = "\033[32m";
+const std::string YELLOW = "\033[33m";
+const std::string CLEAR = "\033[0m";
+
 
 int main(int argc, char **argv) {
     po::options_description desc("Allowed options");
@@ -43,13 +51,17 @@ int main(int argc, char **argv) {
 
     // clang-format off
     desc.add_options()
-        ("help", "produce help message")
-        ("src", po::value<std::string>(), "set source directory")
-        ("include-path", po::value<std::vector<std::string>>(&include_paths), "add include search path directory (cfr. gcc -Ipath)")
-        ("fuzzy", po::value<int>()->default_value(0), "maximal edit distance")
-        ("rename-hpp", "rename headers files to .hpp")
-        ("dry-run", "perform a dry-run")
-        ("verbose", "be verbose")
+        ("help", "Produce help message.")
+        ("src", po::value<std::string>(), "Set source directory.")
+        ("include-path", po::value<std::vector<std::string>>(&include_paths), "Add include search path directory (cfr. gcc -Ipath).")
+        ("fuzzy", po::value<int>()->default_value(0), "Maximal edit distance.")
+        ("process-system-includes", "Also process #include <> statements.")
+        ("system-to-user", "Replace #include < > with #include \" \" when the file is found. "
+                           "Only when --process-system-includes.")
+        ("prefer-relative-to-root", "Rename headers files to .hpp")
+        ("rename-hpp", "Rename headers files to .hpp")
+        ("no-dry-run", "Perform a dry-run")
+        ("verbose", "Be verbose")
         ;
     // clang-format on
 
@@ -84,6 +96,19 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (vm.count("process-system-includes")) {
+      process_system_includes = true;
+      std::cout << "Process system includes." << src << std::endl;
+    }
+    if (vm.count("system-to-user")) {
+      system_to_user = true;
+      std::cout << "Convert system includes to user includes when file is found." << src << std::endl;
+    }
+    if (vm.count("prefer-relative-to-root")) {
+      prefer_relative_to_root = true;
+      std::cout << "Prefer include paths to be always written relative to the root." << src << std::endl;
+    }
+
     if (vm.count("fuzzy")) {
         fuzzy = vm["fuzzy"].as<int>();
         std::cout << "Fuzzy search : " << fuzzy << std::endl;
@@ -91,33 +116,37 @@ int main(int argc, char **argv) {
 
     if (vm.count("rename-hpp")) {
         rename = true;
-        std::cout << "Rename to hpp" << std::endl;
+        std::cout << "Rename to hpp." << std::endl;
     }
 
-    if (vm.count("dry-run")) {
-        dry_run = true;
-        std::cout << "Dry run" << std::endl;
+    if (vm.count("no-dry-run")) {
+        dry_run = false;
+        std::cout << "No dry run." << std::endl;
+    } else {
+        std::cout << "Dry run. (Use --no-dry-run to effectively write changes back to disk.)" << std::endl;
     }
 
     if (vm.count("verbose")) {
         verbose = true;
-        std::cout << "Be verbose" << std::endl;
+        std::cout << "Be verbose." << std::endl;
     }
 
     for (auto &inc : include_paths) {
         if (!fs::is_directory(fs::path(inc))) {
-            std::cout << "Include path does not exist." << std::endl;
-            std::cout << inc << std::endl;
+            std::cout << RED << "Include path does not exist." << std::endl;
+            std::cout << inc << CLEAR << std::endl;
             return 1;
         }
     }
 
     fs::path src_path(src);
     if (!fs::is_directory(src_path)) {
-        std::cout << "Source path does not exist." << std::endl;
-        std::cout << src_path << std::endl;
+        std::cout << RED << "Source path does not exist." << std::endl;
+        std::cout << src_path << CLEAR << std::endl;
         return 1;
     }
+
+    std::cout << std::endl;
 
     std::map<fs::path, std::vector<fs::path>> headers;
     std::vector<fs::path> incpaths;
@@ -138,6 +167,9 @@ int main(int argc, char **argv) {
             rename_headers(e.second);
         }
     }
+
+    std::cout << std::endl;
+
     process_dir(src_path, incpaths, headers);
 
     return 0;
@@ -160,7 +192,7 @@ void rename_headers(std::vector<fs::path> &headers) {
         fs::path newpath = hdr;
         newpath = newpath.replace_extension(".hpp");
         if (newpath != hdr) {
-            std::cout << "Rename: " << hdr << "  ->  " << newpath << std::endl;
+            std::cout << GREEN << "Rename: " << hdr << "  ->  " << newpath << CLEAR << std::endl;
             if (!dry_run) {
                 fs::rename(hdr, newpath);
             }
@@ -187,50 +219,67 @@ void process_dir(fs::path dir, const std::vector<fs::path> &include_paths,
         }
     }
 
+    std::cout << YELLOW << std::endl;
     std::cout << "Replaced : " << replaced << " / " << total << std::endl;
     std::cout << "Untouched: " << untouched << " / " << total << std::endl;
     std::cout << "Failed   : " << failed << " / " << total << std::endl;
     std::cout << "Total    : " << (replaced + untouched + failed) << " / "
-              << total << std::endl;
+              << total << CLEAR << std::endl;
 }
 
 void process_file(fs::path file, const std::vector<fs::path> &include_paths,
                   const std::map<fs::path, std::vector<fs::path>> &headers,
                   size_t *total, size_t *replaced, size_t *untouched,
                   size_t *failed) {
+    std::cout << "Process " << file.string() << " ..." << std::endl;
     std::stringstream buffer;
     std::ifstream in(file.string());
     std::string line;
     while (std::getline(in, line, '\n')) {
-        std::string prefix = "#include \"";
-        if (boost::starts_with(line, prefix)) {
-            size_t endQuotePos = line.find("\"", prefix.size());
-            std::string path =
-                line.substr(prefix.size(), endQuotePos - prefix.size());
-            std::string behindQuote = line.substr(endQuotePos + 1);
-            std::string fixed_path =
-                fix_include(path, file, include_paths, headers);
+        std::string prefix_all = "#include ";
+        std::string prefix_system = "#include <";
+        std::string prefix_user = "#include \"";
+        if (boost::starts_with(line, prefix_user) || (boost::starts_with(line, prefix_system) && process_system_includes)) {
+            std::string path, behind_path, path_with_quotes;
+            size_t endPathPos = 0;
+            bool system = false;
+            if (boost::starts_with(line, prefix_user)) {
+              endPathPos = line.find("\"", prefix_user.size());
+              system = false;
+            } else if (boost::starts_with(line, prefix_system)) {
+              endPathPos = line.find(">", prefix_system.size());
+              system = true;
+            }
+
+            path = line.substr(prefix_user.size(), endPathPos - prefix_user.size());
+            path_with_quotes = line.substr(prefix_all.size(), endPathPos - prefix_all.size() + 1);
+            behind_path = line.substr(endPathPos + 1);
+
+            std::string fixed_path = fix_include(path, file, include_paths, headers, prefer_relative_to_root);
 
             if (fixed_path != "") {
-                std::string nis = "#include \"" + fixed_path + "\"";
-                buffer << nis << behindQuote << std::endl;
+                std::string fixed_path_with_quotes;
+                if (system && !system_to_user) {
+                  fixed_path_with_quotes = "<" + fixed_path + ">";
+                } else {
+                  fixed_path_with_quotes = "\"" + fixed_path + "\"";
+                }
+                buffer << "#include " << fixed_path_with_quotes << behind_path << std::endl;
                 if (fixed_path != path) {
                     (*replaced)++;
 
-                    std::cout << "Replace include: " << path;
-                    std::cout << "  ->  " << fixed_path << std::endl;
+                    std::cout << GREEN << "\tReplace include: " << path_with_quotes;
+                    std::cout << "  ->  " << fixed_path_with_quotes << CLEAR << std::endl;
                 } else {
                     (*untouched)++;
 
-                    if (verbose) {
-                        std::cout << "Untouched include: " << path << std::endl;
-                    }
+                    std::cout << YELLOW << "\tUntouched include: " << path_with_quotes << CLEAR << std::endl;
                 }
             } else {
                 buffer << line << std::endl;
                 (*failed)++;
 
-                std::cout << "Failed to fix include: " << path << std::endl;
+                std::cout << RED << "\tFailed to fix include: " << path_with_quotes << CLEAR << std::endl;
             }
 
             (*total)++;
@@ -249,12 +298,14 @@ void process_file(fs::path file, const std::vector<fs::path> &include_paths,
 
 std::string fix_include(
     std::string path, fs::path file, const std::vector<fs::path> &include_paths,
-    const std::map<fs::path, std::vector<fs::path>> &headers) {
+    const std::map<fs::path, std::vector<fs::path>> &headers, bool prefer_relative_to_root) {
     fs::path dir = file.parent_path();
-    /* Check if the file is in this directory */
-    fs::path local = dir / path;
-    if (fs::exists(local)) {
-        return path;
+    if (!prefer_relative_to_root) {
+        /* Check if the file is in this directory */
+        fs::path local = dir / path;
+        if (fs::exists(local)) {
+            return path;
+        }
     }
 
     fs::path incpath_text(path);
