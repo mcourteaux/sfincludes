@@ -5,19 +5,33 @@ tries to fix all `#include ""` (and optionally `#include <>`) preprocessor
 instructions it can find, by looking for files with similar names, in a set of
 directories you specify.
 
-How does it fix the includes? It searches first finds all header files
-(`.h` or `.hpp`) and then fixes every include with one of the found headers.
+## 👀 Why SFincludes?
+This is the go-to solution to fix your include statements after reorganizing
+your files into different directories. Instead of going through a loop of
+[compile, fix include error, repeat]; `SFincludes` analyzes your project and
+automatically fixes all your include statements.
 
-The selected header is chosen by the file name. By default the filename should
-match exactly. Optionally, fuzzy matching can be done, using the Levenshtein
-distance (aka the "edit distance"). When fuzzy search is enabled, it will try to
-prioritize files in the same directory as the file currently being fixed.
+## ⚙️  How?
+How does it fix the includes? It first gathers all header files (`.h` or
+`.hpp`) found in the specified include directories. Next it processes all files
+one-by-one found in the specified source directories, and then fixes every
+include with one of the found headers. Which header is chosen depends on the
+configuration you pass such as fuzzy filename matching, allowing changing
+system-includes to user-includes and visa-versa.
+
+The selected header is chosen by file name. By default the filename should
+match exactly. When there are multiple files with the exact same name found
+during the header-searching process, the one with the minimal changes in path
+will be preferred (the other options will be reported as alternatives that were
+considered but not chosen). Optionally, fuzzy matching can be done, using a
+customized Levenshtein distance (also known as the "edit distance").
 
 Optionally the `.h` extension can be replaced by a `.hpp` extension for *all*
-your header files. Note that this tool will not try to figure out wether or not
-a particular file is a C or a C++ header.
+your header files. Note that this tool will _not_ try to figure out whether or
+not a particular file is a C or a C++ header. Note that this feature is
+unsuitable for projects that use a mix of C and C++.
 
-## Command line arguments
+## 🖥️ Command line arguments
 
 ```
   --help                     Produce help message.
@@ -44,22 +58,25 @@ a particular file is a C or a C++ header.
   --verbose                  Be verbose.
 ```
 
-The difference between root and src path is:
+Meaning of the paths:
 
- - the **include-path** is a path which will be used to find header files which
+ - an **include-path** is a path which will be used to find header files which
    can be included. If an include can be mapped onto a header in this folder,
    the include will be rewritten, relative to this path. You can add as many
-   include paths as you like.
- - the **src path** is the directory in which it will search for C/C++ files
-   (headers and source files) to fix: rewrite the `#include` statements.
+   include paths as you like (by repeating the flag).
+ - a **src path** is a directory in which it will search for C/C++ files
+   (headers and source files) to fix: it will rewrite the `#include` statements
+   in these files. You can add as many source folders as you like, which is
+   typical if you have a `src/` and an `include/` directory in your project
+   (note that you likely also want to fix the include statements within the
+   header files itself).
 
-Most often, these paths will be the same. Note that you always need to provide
-both.
+Often, these paths will be the same. Note that you always need to provide both.
 
 By default, `sfincludes` will output what it would do. Note that there is a
-summary of the includes it fixed or left untouched. It is adviced to first
-perform a dry run and inspect the summary to see if there are problems (i.e.:
-the total number of succesfully processed includes does not match the total
+summary of the includes it fixed or left untouched. It is advised to first
+perform a dry run and inspect the summary to see if there are problems (i.e.,
+the total number of successfully processed includes does not match the total
 number of includes found). Once confident, changes can actually be executed by
 running `sfincludes` with the flag `--no-dry-run`.
 
@@ -69,7 +86,7 @@ If you use the `--rename-hpp` flag, you will most likely want to set the
 argument to zero, will rename the files, but will fail finding the includes,
 and leave the those includes untouched.
 
-## Example
+## 🔥 Example
 
 In this example, I moved a couple of related header files to their own separate
 subdirectory within the project file structure. For example `neonraw/JRS.hpp`
