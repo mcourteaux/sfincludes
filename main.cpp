@@ -80,6 +80,8 @@ bool process_system_includes = false;
 bool system_to_user = false;
 bool user_to_system = false;
 bool prefer_relative_to_root = false;
+bool omit_untouched = false;
+bool omit_system_failed = false;
 
 const std::string RED = "\033[31m";
 const std::string GREEN = "\033[32m";
@@ -119,6 +121,8 @@ int main(int argc, char **argv) {
       ("rename-hpp", "Rename .h headers files to .hpp.")
       ("no-dry-run", "Actually perform the changes.")
       ("verbose", "Be verbose.")
+      ("omit-untouched", "Do not list the untouched includes. Useful for reviewing.")
+      ("omit-system-failed", "Do not list the system includes which were not resolved. Useful for reviewing.")
       ;
   // clang-format on
 
@@ -199,6 +203,15 @@ int main(int argc, char **argv) {
     std::cout
         << "Prefer include paths to be always written relative to the root."
         << std::endl;
+  }
+  if (vm.count("omit-untouched")) {
+    omit_untouched = true;
+    std::cout << "Will omit reporting untouched includes." << std::endl;
+  }
+  if (vm.count("omit-system-failed")) {
+    omit_system_failed = true;
+    std::cout << "Will omit reporting system includes which were not resolved."
+              << std::endl;
   }
 
   if (vm.count("fuzzy")) {
@@ -356,6 +369,8 @@ void process_file(fs::path file, const std::vector<IncludePath> &include_paths,
     std::string prefix_user = "#include \"";
     if (boost::starts_with(line, prefix_user) ||
         (boost::starts_with(line, prefix_system) && process_system_includes)) {
+      (result->total)++;
+
       std::string path, behind_path, path_with_quotes;
       size_t endPathPos = 0;
       bool system = false;
@@ -421,6 +436,9 @@ void process_file(fs::path file, const std::vector<IncludePath> &include_paths,
         } else {
           (result->untouched)++;
 
+          if (omit_untouched) {
+            continue; // the line is written.
+          }
           std::cout << GREEN
                     << "        ✅ Untouched include: " << path_with_quotes
                     << CLEAR << std::endl;
@@ -438,12 +456,13 @@ void process_file(fs::path file, const std::vector<IncludePath> &include_paths,
         buffer << line << std::endl;
         (result->failed)++;
 
+        if (omit_system_failed && system) {
+          continue; // the line is written.
+        }
         std::cout << RED
                   << "        ❓ Failed to fix include: " << path_with_quotes
                   << CLEAR << std::endl;
       }
-
-      (result->total)++;
     } else {
       buffer << line << std::endl;
     }
@@ -494,7 +513,8 @@ fix_include(const IncludeStmt &include, const fs::path &file,
           if (!root.system) {
             fs::path rel = fs::relative(local, root.path);
             std::string relpath = rel.string();
-            if (rel != local && (relpath.size() < 3 || relpath.substr(0, 2) != "..")) {
+            if (rel != local &&
+                (relpath.size() < 3 || relpath.substr(0, 2) != "..")) {
               candidates.push_back({root, relpath, 0, 0});
               found = true;
             }

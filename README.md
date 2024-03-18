@@ -47,27 +47,31 @@ sudo make install
 
 ```
   --help                     Produce help message.
-  --src arg                  Add a source directory to process. [repeat --src 
+  --src arg                  Add a source directory to process. [repeat --src
                              to specify more]
-  --user-include-path arg    Add user include search path directory (cfr. gcc 
-                             -Ipath) [repeat --user-include-path to specify 
+  --user-include-path arg    Add user include search path directory (cfr. gcc
+                             -Ipath) [repeat --user-include-path to specify
                              more]
   --sys-include-path arg     Add system include search path directory (cfr. gcc
-                             -isystem). [repeat --sys-include-path to specify 
+                             -isystem). [repeat --sys-include-path to specify
                              more]
-  --fuzzy arg (=0)           Maximal filename edit distance (costs: insert=4, 
+  --fuzzy arg (=0)           Maximal filename edit distance (costs: insert=4,
                              change=2, capitalize=1).
   --process-system-includes  Also process #include <> statements.
   --system-to-user           Replace #include <> with #include "" when the file
-                             is found user include search path. Only when 
+                             is found user include search path. Only when
                              --process-system-includes.
   --user-to-system           Replace #include "" with #include <> when the file
                              is found in the system include search path.
-  --prefer-relative-to-root  Also rewrite correct includes to be relative to 
+  --prefer-relative-to-root  Also rewrite correct includes to be relative to
                              their corresponding search path root.
   --rename-hpp               Rename .h headers files to .hpp.
   --no-dry-run               Actually perform the changes.
   --verbose                  Be verbose.
+  --omit-untouched           Do not list the untouched files. Useful for
+                             reviewing.
+  --omit-system-failed       Do not list the system includes which were not
+                             resolved. Useful for reviewing.
 ```
 
 Meaning of the paths:
@@ -197,7 +201,7 @@ Sys-to-user  : 2 / 348
 User-to-sys  : 11 / 348
 Untouched    : 131 / 348
 Failed       : 189 / 348
-``` 
+```
 
 Notice how I had Tracy (a third-party library) included with `#include ""`
 syntax, which I prefer to change to `#include <>`, as it is external to the
@@ -218,3 +222,34 @@ Note that it is not recommended to add actual system includes to the command
 line arguments, as that just slows down the entire process, without any actual
 benefit. Additionally, if you miss any of the real system search paths, you
 risk incorrectly rewriting includes with the wrong target.
+
+When reviewing during the dry-runs and interested in only seeing the changes,
+you can additionally pass `--omit-untouched` and `--omit-system-failed` to get
+a simplified report. For example:
+```
+Processing source directory: /home/martijn/zec/NeonRAW/include...
+    Process /home/martijn/zec/NeonRAW/include/neonraw/jrs/Unique.hpp ...
+    Process /home/martijn/zec/NeonRAW/include/neonraw/jrs/JRS.hpp ...
+        👕 Replace include path: "JRS_fwd.hpp"  ->  "neonraw/jrs/JRS_fwd.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/JRS_fwd.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "ResourceMemory.hpp"  ->  "neonraw/jrs/ResourceMemory.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/ResourceMemory.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "assert.hpp"  ->  "neonraw/debug/assert.hpp"  (distance: fn=0; dir=12) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "build_type.hpp"  ->  "neonraw/debug/build_type.hpp"  (distance: fn=0; dir=12) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "DotVisualizer.hpp"  ->  "neonraw/jrs/DotVisualizer.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/DotVisualizer.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "JRS_impl.hpp"  ->  "neonraw/jrs/JRS_impl.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/JRS_impl.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+    Process /home/martijn/zec/NeonRAW/include/neonraw/jrs/ResourceMemory.hpp ...
+    Process /home/martijn/zec/NeonRAW/include/neonraw/jrs/DotVisualizer.hpp ...
+        👕 Replace include path: "Unique.hpp"  ->  "neonraw/jrs/Unique.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/Unique.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "demangle.hpp"  ->  "neonraw/debug/demangle.hpp"  (distance: fn=0; dir=12) from "/home/martijn/zec/NeonRAW/include"
+    Process /home/martijn/zec/NeonRAW/include/neonraw/jrs/JRS_impl.hpp ...
+        👕 Replace include path: "JRS.hpp"  ->  "neonraw/jrs/JRS.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/JRS.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+        👕 Replace include path: "demangle.hpp"  ->  "neonraw/debug/demangle.hpp"  (distance: fn=0; dir=12) from "/home/martijn/zec/NeonRAW/include"
+    Process /home/martijn/zec/NeonRAW/include/neonraw/jrs/ResourceTracker.hpp ...
+        👕 Replace include path: "JRS.hpp"  ->  "neonraw/jrs/JRS.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
+           - Alternative: neonraw/jrs/JRS.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
+```
