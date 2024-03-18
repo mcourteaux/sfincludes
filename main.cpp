@@ -285,14 +285,21 @@ int main(int argc, char **argv) {
   std::cout << "[Summary]" << std::endl;
   print_results(accum);
 
-  std::cout
-      << std::endl
-      << YELLOW
-      << "⚠\ufe0f Always backup / git commit your work before applying with "
-         "--no-dry-run. ⚠\ufe0f"
-      << std::endl
-      << "Carefully review the changed above before continuing." << CLEAR
-      << std::endl;
+  std::cout << std::endl;
+  if (dry_run) {
+    std::cout
+        << YELLOW
+        << "⚠\ufe0f Always backup / git commit your work before applying with "
+           "--no-dry-run. ⚠\ufe0f"
+        << std::endl
+        << "Carefully review the changed above before continuing." << CLEAR
+        << std::endl;
+  } else {
+    std::cout << YELLOW
+              << "⚠\ufe0f Restart your editor to prevent it from resaving the "
+                 "files you moved away. ⚠\ufe0f"
+              << CLEAR << std::endl;
+  }
 
   return 0;
 }
