@@ -21,14 +21,24 @@ a particular file is a C or a C++ header.
 
 ```
   --help                     Produce help message.
-  --src arg                  Set source directory.
-  --include-path arg         Add include search path directory (cfr. gcc -Ipath).
-  --fuzzy arg (=0)           Maximal edit distance.
+  --src arg                  Add a source directory to process. [repeat --src 
+                             to specify more]
+  --user-include-path arg    Add user include search path directory (cfr. gcc 
+                             -Ipath) [repeat --user-include-path to specify 
+                             more]
+  --sys-include-path arg     Add system include search path directory (cfr. gcc
+                             -isystem). [repeat --sys-include-path to specify 
+                             more]
+  --fuzzy arg (=0)           Maximal filename edit distance (costs: insert=4, 
+                             change=2, capitalize=1).
   --process-system-includes  Also process #include <> statements.
   --system-to-user           Replace #include <> with #include "" when the file
-                             is found. Only when --process-system-includes.
+                             is found user include search path. Only when 
+                             --process-system-includes.
+  --user-to-system           Replace #include "" with #include <> when the file
+                             is found in the system include search path.
   --prefer-relative-to-root  Also rewrite correct includes to be relative to 
-                             the root.
+                             their corresponding search path root.
   --rename-hpp               Rename .h headers files to .hpp.
   --no-dry-run               Actually perform the changes.
   --verbose                  Be verbose.
@@ -54,7 +64,128 @@ number of includes found). Once confident, changes can actually be executed by
 running `sfincludes` with the flag `--no-dry-run`.
 
 If you use the `--rename-hpp` flag, you will most likely want to set the
-`--fuzzy` argument to `2`, as the filenames will have changed with a distance of
-`2`, i.e.: "add `p`, add `p`". Leaving the `--fuzzy` argument to zero, will
-rename the files, but will fail finding the includes, and leave the contents of
-all files probably untouched.
+`--fuzzy` argument to `8`, as the filenames will have changed with a distance of
+`8`, i.e., "add `p` (cost 4), and add `p` (cost 4)". Leaving the `--fuzzy`
+argument to zero, will rename the files, but will fail finding the includes,
+and leave the those includes untouched.
+
+## Example
+
+In this example, I moved a couple of related header files to their own separate
+subdirectory within the project file structure. For example `neonraw/JRS.hpp`
+moved to `neonraw/jrs/JRS.hpp` along with some related files.
+For this project, I have a script set up to invoke `SFincludes`:
+
+```bash
+#!/bin/bash
+
+SFI=sfincludes
+ZDIR=$(dirname "$0")
+
+THIRD_PARTY_SYS_INCLUDES="\
+  --sys-include-path ./NeonRAW/ext/tracy/public/ \
+  --sys-include-path ./3rd/halide_repo/distrib/include/"
+
+# NeonRAW main
+$SFI --process-system-includes --prefer-relative-to-root --system-to-user --user-to-system \
+  --src $ZDIR/NeonRAW/src \
+  --src $ZDIR/NeonRAW/include \
+  --src $ZDIR/NeonRAW/generators \
+  --user-include-path $ZDIR/NeonRAW/include \
+  --sys-include-path $ZDIR/color/include \
+  $THIRD_PARTY_SYS_INCLUDES $@
+```
+which outputs something like this (only an excerpt, stripped away most output for demonstration puproses):
+```
+User inlucde path : ./NeonRAW/include
+System inlucde path : ./color/include
+System inlucde path : ./NeonRAW/ext/tracy/public/
+System inlucde path : ./3rd/halide_repo/distrib/include/
+Source : ./NeonRAW/src
+Source : ./NeonRAW/include
+Source : ./NeonRAW/generators
+Process system includes.
+Convert system includes to user includes when a corresponding file is found in the user include search path.
+Convert user includes to system includes when a corresponding file is found in the system include search path.
+Prefer include paths to be always written relative to the root.
+Fuzzy search : 0
+Dry run. (Use --no-dry-run to effectively write changes back to filesystem.)
+
+Index headers in: "./NeonRAW/include"
+Index headers in: "./color/include"
+Index headers in: "./NeonRAW/ext/tracy/public/"
+Index headers in: "./3rd/halide_repo/distrib/include/"
+
+
+Processing source directory: ./NeonRAW/src...
+    Process ./NeonRAW/src/neonraw/image_processing/BilateralGrid.cpp ...
+        ✅ Untouched include: "neonraw/image_processing/BilateralGrid.hpp"
+        ✅ Untouched include: "neonraw/Engine.hpp"
+        ✅ Untouched include: "neonraw/performance/perfrep.hpp"
+        💄 Change include type: <neonraw/datasource/DataSource.hpp>  ->  "neonraw/datasource/DataSource.hpp"
+        ❓ Failed to fix include: <Eigen/LU>
+        ❓ Failed to fix include: <cmath>
+        💄 Change include type: "tracy/Tracy.hpp"  ->  <tracy/Tracy.hpp>
+        ❓ Failed to fix include: <spdlog/spdlog.h>
+        ❓ Failed to fix include: <halide_image_io.h>
+    Process ./NeonRAW/src/neonraw/ioutils.cpp ...
+        ✅ Untouched include: "neonraw/ioutils.hpp"
+    Process ./NeonRAW/src/neonraw/datasource/SentinelDataSource.cpp ...
+        ✅ Untouched include: "neonraw/datasource/SentinelDataSource.hpp"
+        ✅ Untouched include: <HalideRuntime.h>
+    Process ./NeonRAW/src/neonraw/datasource/RawSpeedDataSource.cpp ...
+        ✅ Untouched include: "neonraw/datasource/RawSpeedDataSource.hpp"
+        ✅ Untouched include: "neonraw/datasource/RawSpeedByproducts.hpp"
+        ✅ Untouched include: "neonraw/utils.hpp"
+        ✅ Untouched include: "neonraw/adobe_coeff.h"
+        ✅ Untouched include: "neonraw/image_processing/BilinearDemosaicer.hpp"
+        ✅ Untouched include: "neonraw/math/matrix_pseudo_inverse.hpp"
+        ❓ Failed to fix include: <neonraw_RAW_to_xyY.h>
+        ❓ Failed to fix include: <decoders/RawDecoderException.h>
+        ✅ Untouched include: <color.hpp>
+        ❓ Failed to fix include: <Eigen/LU>
+        ❓ Failed to fix include: <spdlog/spdlog.h>
+        💄 Change include type: "tracy/Tracy.hpp"  ->  <tracy/Tracy.hpp>
+        ❓ Failed to fix include: <openssl/sha.h>
+    Process ./NeonRAW/src/neonraw/datasource/MemoryBufferDataSource.cpp ...
+        ✅ Untouched include: "neonraw/datasource/MemoryBufferDataSource.hpp"
+        ✅ Untouched include: <HalideRuntime.h>
+    Process ./NeonRAW/src/neonraw/datasource/DataSource.cpp ...
+        ✅ Untouched include: "neonraw/datasource/DataSource.hpp"
+        ✅ Untouched include: "neonraw/mat.hpp"
+        ✅ Untouched include: "neonraw/math/matrix_pseudo_inverse.hpp"
+        👕 Replace include path: "neonraw/JRS.hpp"  ->  "neonraw/jrs/JRS.hpp"  (distance: fn=0; dir=16) from "./NeonRAW/include"
+        ✅ Untouched include: <color.hpp>
+
+<stripped away a lot...>
+
+    Process ./NeonRAW/include/neonraw/datasource/SentinelDataSource.hpp ...
+        👕 Replace include path: "DataSource.hpp"  ->  "neonraw/datasource/DataSource.hpp"  (distance: fn=0; dir=0) from "./NeonRAW/include"
+           - Alternative: neonraw/datasource/DataSource.hpp  (distance: fn=0; dir=3) from "./NeonRAW/include"
+
+Replaced path: 15 / 348
+Sys-to-user  : 2 / 348
+User-to-sys  : 11 / 348
+Untouched    : 131 / 348
+Failed       : 189 / 348
+``` 
+
+Notice how I had Tracy (a third-party library) included with `#include ""`
+syntax, which I prefer to change to `#include <>`, as it is external to the
+current project. I indicated this preference by passing `--user-to-system`.
+The Tracy include path itself was passed as a system search path via
+`--sys-include-path`. `SFincludes` uses this information and rewrites the include
+to use `<...>` instead of `"..."` (indicated with the 💄 emoji).
+
+In the report for last file in this example, notice how it rewrites a
+file-relative path to search-path relative path. In
+`include/neonraw/datasource/` there is both `DataSource.hpp` and
+`SentinelDataSource.hpp`. When processing `SentinelDataSource.hpp`, `SFincludes` detects
+the `#include "DataSource.hpp"` refers to the file in the same directory.
+Because I pass `--prefer-relative-to-root`, it rewrites this to the full path:
+`neonraw/datasource/DataSource.hpp`. Path rewrites are indicated with the 👕 emoji.
+
+Note that it is not recommended to add actual system includes to the command
+line arguments, as that just slows down the entire process, without any actual
+benefit. Additionally, if you miss any of the real system search paths, you
+risk incorrectly rewriting includes with the wrong target.

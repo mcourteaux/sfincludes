@@ -34,13 +34,12 @@ int levenshtein_distance(const std::string &s1, const std::string &s2) {
       }
 
       // clang-format off
-      auto possibilities = {
+      column[y] = std::min({
         column[y] + insert_cost,
         column[y - 1] + insert_cost,
         last_diagonal + diff_cost
-      };
+      });
       // clang-format on
-      column[y] = std::min(possibilities);
       last_diagonal = old_diagonal;
     }
   }
