@@ -31,6 +31,18 @@ your header files. Note that this tool will _not_ try to figure out whether or
 not a particular file is a C or a C++ header. Note that this feature is
 unsuitable for projects that use a mix of C and C++.
 
+## 📥 Installation
+
+```bash
+git clone https://github.com/mcourteaux/sfincludes
+cd sfincludes
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+sudo make install
+```
+
 ## 🖥️ Command line arguments
 
 ```
