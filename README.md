@@ -1,5 +1,5 @@
 # SFincludes
-SFincludes (shorthand for Search Fix Includes) is a tool that goes
+SFincludes (shorthand for _Search-and-Fix Includes_) is a tool that goes
 through all of your source and header files in a given directory and
 tries to fix all `#include ""` (and optionally `#include <>`) preprocessor
 instructions it can find, by looking for files with similar names, in a set of
