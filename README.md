@@ -11,6 +11,14 @@ your files into different directories. Instead of going through a loop of
 [compile, fix include error, repeat]; `SFincludes` analyzes your project and
 automatically fixes all your include statements.
 
+## ⭐ Features
+
+ - Find the **best match** of the incorrect include path to fix it.
+ - **Preserves comments** after the `#include` statement.
+ - Detailed **dry-run report** before actually rewriting your includes.
+ - Optional **fuzzy name-matching** in case you also rename header files.
+ - Fast and small: binary is less than 200kB.
+
 ## ⚙️  How?
 How does it fix the includes? It first gathers all header files (`.h` or
 `.hpp`) found in the specified include directories. Next it processes all files
@@ -30,14 +38,6 @@ Optionally the `.h` extension can be replaced by a `.hpp` extension for *all*
 your header files. Note that this tool will _not_ try to figure out whether or
 not a particular file is a C or a C++ header. Note that this feature is
 unsuitable for projects that use a mix of C and C++.
-
-## ⭐ Features
-
- - Find the **best match** of the incorrect include path to fix it.
- - **Preserves comments** after the `#include` statement.
- - Detailed **dry-run report** before actually rewriting your includes.
- - Optional **fuzzy name-matching** in case you also rename header files.
- - Fast and small: binary is less than 200kB.
 
 ## 📥 Installation
 
@@ -266,6 +266,6 @@ Notice that because of special handling of relative-to-current-file include
 statements, some headers are reported again as an alternative, but with a
 higher directory distance. You can ignore these.
 
-## ✅ License
+## ⚖️  License
 
-This work is distributed under the MIT license: see the LICENSE file.
+This work is distributed under the MIT license: see the [LICENSE](https://github.com/mcourteaux/sfincludes/blob/master/LICENSE) file.
