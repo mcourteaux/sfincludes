@@ -31,6 +31,14 @@ your header files. Note that this tool will _not_ try to figure out whether or
 not a particular file is a C or a C++ header. Note that this feature is
 unsuitable for projects that use a mix of C and C++.
 
+## ⭐ Features
+
+ - Find the **best match** of the incorrect include path to fix it.
+ - **Preserves comments** after the `#include` statement.
+ - Detailed **dry-run report** before actually rewriting your includes.
+ - Optional **fuzzy name-matching** in case you also rename header files.
+ - Fast and small: binary is less than 200kB.
+
 ## 📥 Installation
 
 ```bash
@@ -253,3 +261,11 @@ Processing source directory: /home/martijn/zec/NeonRAW/include...
         👕 Replace include path: "JRS.hpp"  ->  "neonraw/jrs/JRS.hpp"  (distance: fn=0; dir=0) from "/home/martijn/zec/NeonRAW/include"
            - Alternative: neonraw/jrs/JRS.hpp  (distance: fn=0; dir=3) from "/home/martijn/zec/NeonRAW/include"
 ```
+
+Notice that because of special handling of relative-to-current-file include
+statements, some headers are reported again as an alternative, but with a
+higher directory distance. You can ignore these.
+
+## ✅ License
+
+This work is distributed under the MIT license: see the LICENSE file.
