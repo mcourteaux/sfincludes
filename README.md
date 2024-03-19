@@ -14,6 +14,7 @@ automatically fixes all your include statements.
 ## ⭐ Features
 
  - Find the **best match** of the incorrect include path to fix it.
+ - Handles both project-local `#include ""` and project-external `#include <>` statements.
  - **Preserves comments** after the `#include` statement.
  - Detailed **dry-run report** before actually rewriting your includes.
  - Optional **fuzzy name-matching** in case you also rename header files.
